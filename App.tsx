@@ -83,11 +83,12 @@ const generateMapHTML = (plants: NativePlantObservation[]) => `
 
         const wildCatStyle = new ol.style.Style({
             stroke: new ol.style.Stroke({
-            color: 'rgba(255, 0, 0, 1)',  // red border
-            width: 2
+            color: 'rgb(0, 128, 255)',
+            width: 1,
+            radius: 5,
         }),
         fill: new ol.style.Fill({
-          color: 'rgba(255, 0, 0, 0.3)' // semi-transparent red fill
+          color: 'rgba(0, 140, 255, 0.1)'
         })
       });
 
@@ -116,17 +117,44 @@ const generateMapHTML = (plants: NativePlantObservation[]) => `
             return feature;
         });
 
-        // Create a style for the plant markers (blue dots)
+        // Create a light green plant SVG icon
+        const plantSvg = \`
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 64 64"
+              width="64"
+              height="64"
+            >
+              <g
+                fill="#2ecc71"
+                stroke="#27ae60"
+                stroke-width="1"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <!-- slightly curved stem -->
+                <path d="M32 52c-1-8-1-16 0-26 0-2 0-4 0-6s0-2 0-2c0 0-2 1-3 3-1 2-1 4-1 6 0 8 1 16 2 24 0 1 1 2 2 2s2-1 2-2z" />
+
+                <!-- left leaf (curvier and smoother) -->
+                <path d="M29 26c-7-5-15-7-21-3 3 5 9 9 17 9 3 0 5-2 5-6 0 0 0 0-1 0z" />
+
+                <!-- right leaf (curvier and smoother) -->
+                <path d="M35 26c7-5 15-7 21-3-3 5-9 9-17 9-3 0-5-2-5-6 0 0 0 0 1 0z" />
+              </g>
+            </svg>
+        \`;
+
+        // Convert SVG to data URI
+        const plantIconUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(plantSvg);
+
+        // Create a style for the plant markers with plant icon
         const plantStyle = new ol.style.Style({
-            image: new ol.style.Circle({
-                radius: 6,
-                fill: new ol.style.Fill({
-                    color: 'rgba(0, 100, 255, 0.8)' // blue
-                }),
-                stroke: new ol.style.Stroke({
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    width: 2
-                })
+            image: new ol.style.Icon({
+                src: plantIconUri,
+                scale: 0.8,
+                anchor: [0.5, 1], // Anchor at bottom center
+                anchorXUnits: 'fraction',
+                anchorYUnits: 'fraction'
             })
         });
 
