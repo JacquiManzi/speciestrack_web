@@ -22,45 +22,21 @@ export interface ApiError {
 }
 
 /**
- * Example: Species Type
- * Replace with your actual data models
+ * Native Plant Observation Type
  */
-export interface Species {
-  id: string;
-  name: string;
-  scientificName: string;
-  category?: string;
-  description?: string;
-  imageUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-/**
- * Example: Observation Type
- */
-export interface Observation {
-  id: string;
-  speciesId: string;
-  latitude: number;
-  longitude: number;
-  observedAt: string;
-  notes?: string;
-  imageUrl?: string;
-  userId?: string;
-  createdAt?: string;
-}
-
-/**
- * Example: Location Type
- */
-export interface Location {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  boundary?: string; // WKT polygon
-  description?: string;
+export interface NativePlantObservation {
+  id: number;
+  common_name: string;
+  scientific_name: string;
+  decimal_latitude: number;
+  decimal_longitude: number;
+  native: boolean;
+  observation_count: number;
+  observation_type: string;
+  fetch_date: string;
+  created_at: string;
+  updated_at: string;
+  occurrence_id: string;
 }
 
 /**

@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
   SPECIES: '/species',
   OBSERVATIONS: '/observations',
   LOCATIONS: '/locations',
+  NATIVE_PLANTS: '/native-plants',
   // Add more endpoints as needed
 } as const;
 

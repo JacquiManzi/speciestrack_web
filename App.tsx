@@ -1,9 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { getNativePlants } from './src/services/observationsService';
+import type { NativePlantObservation } from './src/types/api';
 
-const mapHTML = `
+const generateMapHTML = (plants: NativePlantObservation[]) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,6 +28,27 @@ const mapHTML = `
         #map {
             width: 100%;
             height: 100%;
+        }
+        .ol-tooltip {
+            position: relative;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 4px;
+            color: white;
+            padding: 8px 12px;
+            opacity: 0.9;
+            white-space: nowrap;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            pointer-events: none;
+        }
+        .ol-tooltip:before {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border: 5px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.8);
         }
     </style>
 </head>
@@ -76,24 +99,113 @@ const mapHTML = `
       });
 
         map.addLayer(wildCatVectorLayer);
+
+        // Native plants data
+        const nativePlants = ${JSON.stringify(plants)};
+
+        // Create features for each native plant observation
+        const plantFeatures = nativePlants.map(plant => {
+            const feature = new ol.Feature({
+                geometry: new ol.geom.Point(
+                    ol.proj.fromLonLat([plant.decimal_longitude, plant.decimal_latitude])
+                ),
+                name: plant.common_name,
+                scientificName: plant.scientific_name,
+                occurrenceId: plant.occurrence_id
+            });
+            return feature;
+        });
+
+        // Create a style for the plant markers (blue dots)
+        const plantStyle = new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 6,
+                fill: new ol.style.Fill({
+                    color: 'rgba(0, 100, 255, 0.8)' // blue
+                }),
+                stroke: new ol.style.Stroke({
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    width: 2
+                })
+            })
+        });
+
+        // Create a vector layer for the plant markers
+        const plantVectorLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: plantFeatures
+            }),
+            style: plantStyle
+        });
+
+        map.addLayer(plantVectorLayer);
+
+        // Create tooltip overlay
+        const tooltip = document.createElement('div');
+        tooltip.className = 'ol-tooltip';
+        const tooltipOverlay = new ol.Overlay({
+            element: tooltip,
+            offset: [0, -15],
+            positioning: 'bottom-center'
+        });
+        map.addOverlay(tooltipOverlay);
+
+        // Handle pointer move for hover effect
+        map.on('pointermove', function(evt) {
+            const pixel = map.getEventPixel(evt.originalEvent);
+            const feature = map.forEachFeatureAtPixel(pixel, function(feature, layer) {
+                if (layer === plantVectorLayer) {
+                    return feature;
+                }
+            });
+
+            if (feature) {
+                const name = feature.get('name');
+                tooltip.innerHTML = name;
+                tooltipOverlay.setPosition(evt.coordinate);
+                tooltip.style.display = 'block';
+                map.getTargetElement().style.cursor = 'pointer';
+            } else {
+                tooltip.style.display = 'none';
+                map.getTargetElement().style.cursor = '';
+            }
+        });
+
+        // Handle click to open gbif link
+        map.on('click', function(evt) {
+            const pixel = map.getEventPixel(evt.originalEvent);
+            const feature = map.forEachFeatureAtPixel(pixel, function(feature, layer) {
+                if (layer === plantVectorLayer) {
+                    return feature;
+                }
+            });
+
+            if (feature) {
+                const occurrenceId = feature.get('occurrenceId');
+                if (occurrenceId) {
+                    const gbifUrl = 'https://www.gbif.org/occurrence/' + occurrenceId;
+                    window.open(gbifUrl, '_blank');
+                }
+            }
+        });
     </script>
 </body>
 </html>
 `;
 
-function WebMap() {
+function WebMap({ plants }: { plants: NativePlantObservation[] }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    if (iframeRef.current) {
+    if (iframeRef.current && plants.length > 0) {
       const iframeDoc = iframeRef.current.contentDocument;
       if (iframeDoc) {
         iframeDoc.open();
-        iframeDoc.write(mapHTML);
+        iframeDoc.write(generateMapHTML(plants));
         iframeDoc.close();
       }
     }
-  }, []);
+  }, [plants]);
 
   return (
     <iframe
@@ -105,14 +217,42 @@ function WebMap() {
 }
 
 export default function App() {
+  const [plants, setPlants] = useState<NativePlantObservation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlants = async () => {
+      try {
+        const data = await getNativePlants();
+        setPlants(data);
+      } catch (error) {
+        console.error('Error fetching native plants:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlants();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View
+          style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+        ></View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {Platform.OS === 'web' ? (
-        <WebMap />
+        <WebMap plants={plants} />
       ) : (
         <WebView
           originWhitelist={['*']}
-          source={{ html: mapHTML }}
+          source={{ html: generateMapHTML(plants) }}
           style={styles.webview}
           javaScriptEnabled={true}
           domStorageEnabled={true}
