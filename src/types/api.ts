@@ -48,6 +48,16 @@ export interface PaginationParams {
 }
 
 /**
+ * Native Plant Filter Params
+ */
+export interface NativePlantFilterParams extends PaginationParams {
+  start_time?: string;
+  end_time?: string;
+  common_name?: string;
+  scientific_name?: string;
+}
+
+/**
  * Paginated Response
  */
 export interface PaginatedResponse<T> {

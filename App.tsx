@@ -1,9 +1,13 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, Platform } from 'react-native';
+import { StyleSheet, View, Platform, Pressable, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useEffect, useRef, useState } from 'react';
 import { getNativePlants } from './src/services/observationsService';
-import type { NativePlantObservation } from './src/types/api';
+import type {
+  NativePlantObservation,
+  NativePlantFilterParams,
+} from './src/types/api';
+import { FilterPanel, type FilterValues } from './src/components/FilterPanel';
 
 const generateMapHTML = (plants: NativePlantObservation[]) => `
 <!DOCTYPE html>
@@ -225,7 +229,7 @@ function WebMap({ plants }: { plants: NativePlantObservation[] }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    if (iframeRef.current && plants.length > 0) {
+    if (iframeRef.current) {
       const iframeDoc = iframeRef.current.contentDocument;
       if (iframeDoc) {
         iframeDoc.open();
@@ -247,21 +251,53 @@ function WebMap({ plants }: { plants: NativePlantObservation[] }) {
 export default function App() {
   const [plants, setPlants] = useState<NativePlantObservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<FilterValues>({});
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+
+  const fetchPlants = async (filterParams?: FilterValues) => {
+    setLoading(true);
+    try {
+      const params: NativePlantFilterParams = {};
+
+      if (filterParams?.startTime) {
+        params.start_time = filterParams.startTime;
+      }
+      if (filterParams?.endTime) {
+        params.end_time = filterParams.endTime;
+      }
+      if (filterParams?.commonName) {
+        params.common_name = filterParams.commonName;
+      }
+      if (filterParams?.scientificName) {
+        params.scientific_name = filterParams.scientificName;
+      }
+
+      console.log('Fetching plants with params:', params);
+      const data = await getNativePlants(params);
+      console.log(`Received ${data.length} plants`);
+      setPlants(data);
+    } catch (error) {
+      console.error('Error fetching native plants:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPlants = async () => {
-      try {
-        const data = await getNativePlants();
-        setPlants(data);
-      } catch (error) {
-        console.error('Error fetching native plants:', error);
-      } finally {
-        setLoading(false);
-      }
+    // Load current year on initial mount
+    const currentYear = new Date().getFullYear();
+    const initialFilters = {
+      startTime: `${currentYear}-01-01T00:00:00`,
+      endTime: `${currentYear}-12-31T23:59:59`,
     };
-
-    fetchPlants();
+    setFilters(initialFilters);
+    fetchPlants(initialFilters);
   }, []);
+
+  const handleFilterChange = (newFilters: FilterValues) => {
+    setFilters(newFilters);
+    fetchPlants(newFilters);
+  };
 
   if (loading) {
     return (
@@ -275,17 +311,43 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      {Platform.OS === 'web' ? (
-        <WebMap plants={plants} />
-      ) : (
-        <WebView
-          originWhitelist={['*']}
-          source={{ html: generateMapHTML(plants) }}
-          style={styles.webview}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-        />
-      )}
+      {/* Filter Button */}
+      <Pressable
+        style={styles.filterButton}
+        onPress={() => setIsFilterVisible(!isFilterVisible)}
+      >
+        <Text style={styles.filterIcon}>⚙</Text>
+      </Pressable>
+
+      {/* Filter Panel */}
+      <FilterPanel
+        onFilterChange={handleFilterChange}
+        isVisible={isFilterVisible}
+        onClose={() => setIsFilterVisible(false)}
+      />
+
+      {/* Map */}
+      <View style={styles.mapContainer}>
+        {Platform.OS === 'web' ? (
+          <WebMap plants={plants} />
+        ) : (
+          <WebView
+            originWhitelist={['*']}
+            source={{ html: generateMapHTML(plants) }}
+            style={styles.webview}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+          />
+        )}
+      </View>
+
+      {/* Count Indicator */}
+      <View style={styles.countIndicator}>
+        <Text style={styles.countText}>
+          {plants.length} observation{plants.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
+
       <StatusBar style="auto" />
     </View>
   );
@@ -295,6 +357,49 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  filterButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: '#7CB342',
+    borderRadius: 8,
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 999,
+  },
+  filterIcon: {
+    fontSize: 24,
+    color: '#fff',
+  },
+  countIndicator: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  countText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  mapContainer: {
+    flex: 1,
   },
   webview: {
     flex: 1,
