@@ -3,6 +3,7 @@
  * Helper functions for debugging API calls
  */
 
+import { Platform } from 'react-native';
 import { getCurrentApiUrl, isDevelopment } from '../config/api';
 
 /**
@@ -13,6 +14,7 @@ export const logApiConfig = () => {
   const url = getCurrentApiUrl();
 
   console.log('=== API Configuration ===');
+  console.log(`Platform: ${Platform.OS}`);
   console.log(`Environment: ${env}`);
   console.log(`API Base URL: ${url}`);
   console.log('========================');

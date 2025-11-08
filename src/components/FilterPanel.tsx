@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, TextInput, StyleSheet, Text, Pressable } from 'react-native';
-import { DatePicker } from './DatePicker';
+import { DatePickerInput } from './DatePickerInput';
 
 export interface FilterValues {
   startTime?: string;
@@ -27,58 +27,58 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   isVisible,
   onClose,
 }) => {
-  const [filterMode, setFilterMode] = useState<DateFilterMode>('year');
-  const currentDateStr = new Date().toISOString().split('T')[0];
   const currentYear = new Date().getFullYear();
-
-  const [startDate, setStartDate] = useState<string>(`${currentYear}-01-01`);
-  const [endDate, setEndDate] = useState<string>(`${currentYear}-12-31`);
+  const [filterMode, setFilterMode] = useState<DateFilterMode>('year');
+  const [startDate, setStartDate] = useState<Date>(new Date(currentYear, 0, 1));
+  const [endDate, setEndDate] = useState<Date>(new Date(currentYear, 11, 31));
   const [commonName, setCommonName] = useState<string>('');
   const [scientificName, setScientificName] = useState<string>('');
 
   if (!isVisible) return null;
 
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const applyQuickFilter = (mode: DateFilterMode) => {
-    const d = new Date(currentDateStr);
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
 
     switch (mode) {
-      case 'year': {
-        const year = d.getFullYear();
-        setStartDate(`${year}-01-01`);
-        setEndDate(`${year}-12-31`);
+      case 'year':
+        setStartDate(new Date(year, 0, 1));
+        setEndDate(new Date(year, 11, 31));
         break;
-      }
-      case 'month': {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const lastDay = new Date(year, d.getMonth() + 1, 0).getDate();
-        setStartDate(`${year}-${month}-01`);
-        setEndDate(`${year}-${month}-${String(lastDay).padStart(2, '0')}`);
+      case 'month':
+        setStartDate(new Date(year, month, 1));
+        setEndDate(new Date(year, month + 1, 0));
         break;
-      }
       case 'week': {
-        const dayOfWeek = d.getDay();
-        const startOfWeek = new Date(d);
-        startOfWeek.setDate(d.getDate() - dayOfWeek);
-        const endOfWeek = new Date(d);
-        endOfWeek.setDate(d.getDate() + (6 - dayOfWeek));
-        setStartDate(startOfWeek.toISOString().split('T')[0]);
-        setEndDate(endOfWeek.toISOString().split('T')[0]);
+        const dayOfWeek = now.getDay();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - dayOfWeek);
+        const endOfWeek = new Date(now);
+        endOfWeek.setDate(now.getDate() + (6 - dayOfWeek));
+        setStartDate(startOfWeek);
+        setEndDate(endOfWeek);
         break;
       }
-      case 'day': {
-        setStartDate(currentDateStr);
-        setEndDate(currentDateStr);
+      case 'day':
+        setStartDate(new Date(year, month, now.getDate()));
+        setEndDate(new Date(year, month, now.getDate()));
         break;
-      }
     }
     setFilterMode(mode);
   };
 
   const applyFilters = () => {
     const filters: FilterValues = {
-      startTime: `${startDate}T00:00:00`,
-      endTime: `${endDate}T23:59:59`,
+      startTime: `${formatDate(startDate)}T00:00:00`,
+      endTime: `${formatDate(endDate)}T23:59:59`,
     };
 
     if (commonName.trim()) {
@@ -90,8 +90,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     }
 
     console.log('Applying filters:', filters);
-    console.log('Start date:', startDate);
-    console.log('End date:', endDate);
+    console.log('Start date:', formatDate(startDate));
+    console.log('End date:', formatDate(endDate));
 
     onFilterChange(filters);
     onClose();
@@ -99,8 +99,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
   const clearFilters = () => {
     const year = new Date().getFullYear();
-    setStartDate(`${year}-01-01`);
-    setEndDate(`${year}-12-31`);
+    setStartDate(new Date(year, 0, 1));
+    setEndDate(new Date(year, 11, 31));
     setCommonName('');
     setScientificName('');
     setFilterMode('year');
@@ -145,11 +145,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         <View style={styles.dateRow}>
           <View style={styles.dateColumn}>
             <Text style={styles.dateLabel}>Start</Text>
-            <DatePicker value={startDate} onChange={setStartDate} />
+            <DatePickerInput value={startDate} onChange={setStartDate} />
           </View>
           <View style={styles.dateColumn}>
             <Text style={styles.dateLabel}>End</Text>
-            <DatePicker value={endDate} onChange={setEndDate} />
+            <DatePickerInput value={endDate} onChange={setEndDate} />
           </View>
         </View>
       </View>

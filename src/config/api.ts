@@ -2,22 +2,31 @@
  * API Configuration
  */
 
+import { Platform } from 'react-native';
+
 // API URLs for different environments
-const DEV_API_URL = 'http://127.0.0.1:5000';
+// Note: Android emulator uses 10.0.2.2 to access host machine's localhost
+const DEV_API_URL_WEB_IOS = 'http://127.0.0.1:5000';
+const DEV_API_URL_ANDROID = 'http://10.0.2.2:5000';
 const PROD_API_URL = 'https://api.speciestrack.com';
 
-// Determine which URL to use based on environment
+// Determine which URL to use based on environment and platform
 const getBaseUrl = () => {
   // @ts-ignore - __DEV__ is a global variable in React Native
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    return DEV_API_URL;
+    // In development, use different localhost addresses based on platform
+    if (Platform.OS === 'android') {
+      return DEV_API_URL_ANDROID;
+    }
+    return DEV_API_URL_WEB_IOS;
   }
   return PROD_API_URL;
 };
 
 export const API_CONFIG = {
   BASE_URL: getBaseUrl(),
-  DEV_API_URL,
+  DEV_API_URL_WEB_IOS,
+  DEV_API_URL_ANDROID,
   PROD_API_URL,
   TIMEOUT: 30000, // 30 seconds
   HEADERS: {

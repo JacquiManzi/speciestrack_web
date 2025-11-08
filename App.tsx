@@ -251,7 +251,6 @@ function WebMap({ plants }: { plants: NativePlantObservation[] }) {
 export default function App() {
   const [plants, setPlants] = useState<NativePlantObservation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<FilterValues>({});
   const [isFilterVisible, setIsFilterVisible] = useState(false);
 
   const fetchPlants = async (filterParams?: FilterValues) => {
@@ -272,9 +271,7 @@ export default function App() {
         params.scientific_name = filterParams.scientificName;
       }
 
-      console.log('Fetching plants with params:', params);
       const data = await getNativePlants(params);
-      console.log(`Received ${data.length} plants`);
       setPlants(data);
     } catch (error) {
       console.error('Error fetching native plants:', error);
@@ -290,12 +287,10 @@ export default function App() {
       startTime: `${currentYear}-01-01T00:00:00`,
       endTime: `${currentYear}-12-31T23:59:59`,
     };
-    setFilters(initialFilters);
     fetchPlants(initialFilters);
   }, []);
 
   const handleFilterChange = (newFilters: FilterValues) => {
-    setFilters(newFilters);
     fetchPlants(newFilters);
   };
 
